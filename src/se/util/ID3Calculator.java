@@ -52,10 +52,8 @@ public class ID3Calculator {
             String valorAtrib = columnaAtrib.get(i);
             String valorMeta = columnaMeta.get(i);
             
-            if (!valoresPorAtributo.containsKey(valorAtrib)) {
-                valoresPorAtributo.put(valorAtrib, new ArrayList<>());
-            }
-            valoresPorAtributo.get(valorAtrib).add(valorMeta);
+            valoresPorAtributo.computeIfAbsent(valorAtrib, k -> new ArrayList<>())
+                             .add(valorMeta);
         }
         
         // Calcular entropía ponderada
@@ -72,7 +70,7 @@ public class ID3Calculator {
         return entropiaTotal - entropiaPonderada;
     }
     
-    // Construye el árbol ID3
+    // Construye el árbol ID3 - Implementación completa
     public static Nodo construirArbol(TablaID3 tabla, List<Integer> atributosDisponibles) {
         // Validaciones iniciales
         if (tabla == null || tabla.getDatos().isEmpty() || atributosDisponibles == null) {
@@ -97,26 +95,67 @@ public class ID3Calculator {
             return new Nodo(null, obtenerValorMasFrecuente(columnaMeta));
         }
 
+        // Crear nodo raíz con el mejor atributo
         Nodo raiz = new Nodo(tabla.getColumnas().get(mejorAtributo));
         
-        // Resto del código igual...
+        // Obtener todos los valores únicos del mejor atributo
+        List<String> columnaAtributo = obtenerColumna(tabla, mejorAtributo);
+        Set<String> valoresAtributo = new HashSet<>(columnaAtributo);
+        
+        // Para cada valor posible del atributo
+        for (String valor : valoresAtributo) {
+            // Crear subconjunto de datos para este valor
+            TablaID3 subTabla = obtenerSubtabla(tabla, mejorAtributo, valor);
+            
+            // Si el subconjunto está vacío
+            if (subTabla.getDatos().isEmpty()) {
+                raiz.agregarHijo(valor, new Nodo(valor, obtenerValorMasFrecuente(columnaMeta)));
+            } else {
+                // Crear nueva lista de atributos disponibles excluyendo el actual
+                List<Integer> nuevosAtributos = new ArrayList<>(atributosDisponibles);
+                nuevosAtributos.remove(Integer.valueOf(mejorAtributo));
+                
+                // Recursivamente construir el subárbol
+                subTabla.setColumnaObjetivo(tabla.getColumnaObjetivo());
+                Nodo subArbol = construirArbol(subTabla, nuevosAtributos);
+                raiz.agregarHijo(valor, subArbol);
+            }
+        }
+        
         return raiz;
     }
     
-    // Métodos auxiliares
+    // Métodos auxiliares mejorados
     private static List<String> obtenerColumna(TablaID3 tabla, int columna) {
+        if (columna < 0 || columna >= tabla.getColumnas().size()) {
+            throw new IllegalArgumentException("Índice de columna fuera de rango");
+        }
+        
         List<String> resultado = new ArrayList<>();
         for (List<String> fila : tabla.getDatos()) {
-            resultado.add(fila.get(columna));
+            if (columna < fila.size()) {
+                resultado.add(fila.get(columna));
+            } else {
+                throw new IllegalStateException("Inconsistencia en los datos: fila incompleta");
+            }
         }
         return resultado;
     }
     
     private static String obtenerValorMasFrecuente(List<String> valores) {
+        if (valores == null || valores.isEmpty()) {
+            throw new IllegalArgumentException("Lista de valores vacía");
+        }
+        
         Map<String, Long> frecuencias = valores.stream()
+            .filter(Objects::nonNull)
             .collect(HashMap::new, 
                     (m, v) -> m.merge(v, 1L, Long::sum),
                     HashMap::putAll);
+        
+        if (frecuencias.isEmpty()) {
+            throw new IllegalStateException("No hay valores válidos para procesar");
+        }
         
         return Collections.max(frecuencias.entrySet(), 
             Map.Entry.comparingByValue()).getKey();
@@ -127,31 +166,27 @@ public class ID3Calculator {
             return -1;
         }
 
-        int mejorAtributo = atributosDisponibles.get(0);
-        double mayorGanancia = -1;
-
-        for (int atributo : atributosDisponibles) {
-            double ganancia = calcularGanancia(tabla, atributo);
-            if (ganancia > mayorGanancia) {
-                mayorGanancia = ganancia;
-                mejorAtributo = atributo;
-            }
-        }
-
-        return mejorAtributo;
+        return atributosDisponibles.stream()
+            .max(Comparator.comparingDouble(atributo -> 
+                calcularGanancia(tabla, atributo)))
+            .orElse(-1);
     }
     
-    private static TablaID3 obtenerSubtabla(TablaID3 tabla, 
-                                          int columnaAtributo, 
-                                          String valor) {
+    private static TablaID3 obtenerSubtabla(TablaID3 tabla, int columnaAtributo, String valor) {
         TablaID3 subTabla = new TablaID3();
+        
+        // Copiar estructura de columnas
         tabla.getColumnas().forEach(subTabla::agregarColumna);
         
+        // Filtrar filas que coincidan con el valor del atributo
         for (List<String> fila : tabla.getDatos()) {
             if (fila.get(columnaAtributo).equals(valor)) {
                 subTabla.agregarFila(new ArrayList<>(fila));
             }
         }
+        
+        // Mantener la misma columna objetivo
+        subTabla.setColumnaObjetivo(tabla.getColumnaObjetivo());
         
         return subTabla;
     }
