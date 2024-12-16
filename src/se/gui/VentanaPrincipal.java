@@ -12,6 +12,7 @@ package se.gui;
 import se.util.MathUtils;
 import javax.swing.*;
 import java.awt.*;
+import java.io.File;
 import se.model.TablaID3;
 import se.util.CargadorDatos;
 
@@ -145,15 +146,23 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         JFileChooser fileChooser = new JFileChooser();
         if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
             try {
-                TablaID3 datos = CargadorDatos.cargarDesdeCSV(
-                    fileChooser.getSelectedFile()
-                );
+                // Cargar datos
+                File archivoSeleccionado = fileChooser.getSelectedFile();
+                TablaID3 datos = CargadorDatos.cargarDesdeCSV(archivoSeleccionado);
+
+                // Validar datos
+                CargadorDatos.validarDatos(datos);
+
+                // Mostrar datos en la tabla
                 panelTabla.cargarDatos(datos);
                 actualizarComboColumnas(datos);
+
+                JOptionPane.showMessageDialog(this, "Archivo cargado y validado correctamente.",
+                        "Éxito", JOptionPane.INFORMATION_MESSAGE);
+
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this,
-                    "Error al cargar archivo: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Error al cargar archivo: " + ex.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
