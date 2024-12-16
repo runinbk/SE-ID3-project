@@ -14,48 +14,75 @@ import javax.swing.*;
 import java.awt.*;
 
 public class VentanaPrincipal extends javax.swing.JFrame {
+    // Declaración de componentes
     private JTextField txtTotal;
     private JTextField txtFavorables;
     private JLabel lblResultado;
     private JButton btnCalcular;
+    private JPanel panelPrincipal;
+    private JPanel panelEntropiaBasica;
     
     public VentanaPrincipal() {
         initComponents();
-        inicializarComponentes();
+        configurarVentana();
+        configurarPanelEntropiaBasica();
+        configurarEventos();
     }
     
-    private void inicializarComponentes() {
-        setTitle("Implementación ID3");
+    private void configurarVentana() {
+        setTitle("Implementación ID3 - Cálculos de Entropía");
         setSize(500, 300);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         
-        // Panel para cálculo de entropía básica
-        JPanel panelEntropiaBasica = new JPanel();
-        panelEntropiaBasica.setLayout(new GridLayout(4, 2, 10, 10));
-        panelEntropiaBasica.setBorder(BorderFactory.createTitledBorder("Cálculo de Entropía Básica"));
+        panelPrincipal = new JPanel(new BorderLayout(10, 10));
+        panelPrincipal.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        setContentPane(panelPrincipal);
+    }
+    
+    private void configurarPanelEntropiaBasica() {
+        panelEntropiaBasica = new JPanel(new GridBagLayout());
+        panelEntropiaBasica.setBorder(
+            BorderFactory.createTitledBorder("Cálculo de Entropía Binaria")
+        );
         
-        // Componentes
-        panelEntropiaBasica.add(new JLabel("Total de casos (n):"));
-        txtTotal = new JTextField();
-        panelEntropiaBasica.add(txtTotal);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
         
-        panelEntropiaBasica.add(new JLabel("Casos favorables:"));
-        txtFavorables = new JTextField();
-        panelEntropiaBasica.add(txtFavorables);
+        // Etiqueta y campo para total de casos
+        gbc.gridx = 0; gbc.gridy = 0;
+        panelEntropiaBasica.add(new JLabel("Total de casos (n):"), gbc);
         
-        btnCalcular = new JButton("Calcular");
-        panelEntropiaBasica.add(btnCalcular);
+        gbc.gridx = 1;
+        txtTotal = new JTextField(10);
+        panelEntropiaBasica.add(txtTotal, gbc);
         
+        // Etiqueta y campo para casos favorables
+        gbc.gridx = 0; gbc.gridy = 1;
+        panelEntropiaBasica.add(new JLabel("Casos favorables:"), gbc);
+        
+        gbc.gridx = 1;
+        txtFavorables = new JTextField(10);
+        panelEntropiaBasica.add(txtFavorables, gbc);
+        
+        // Botón calcular
+        gbc.gridx = 0; gbc.gridy = 2;
+        gbc.gridwidth = 2;
+        btnCalcular = new JButton("Calcular Entropía");
+        panelEntropiaBasica.add(btnCalcular, gbc);
+        
+        // Etiqueta resultado
+        gbc.gridy = 3;
         lblResultado = new JLabel("Resultado: ");
-        panelEntropiaBasica.add(lblResultado);
+        lblResultado.setFont(new Font("Dialog", Font.BOLD, 14));
+        panelEntropiaBasica.add(lblResultado, gbc);
         
-        // Evento del botón
+        panelPrincipal.add(panelEntropiaBasica, BorderLayout.CENTER);
+    }
+    
+    private void configurarEventos() {
         btnCalcular.addActionListener(e -> calcularEntropia());
-        
-        // Agregar panel al frame
-        setLayout(new BorderLayout());
-        add(panelEntropiaBasica, BorderLayout.CENTER);
     }
     
     private void calcularEntropia() {
@@ -63,21 +90,32 @@ public class VentanaPrincipal extends javax.swing.JFrame {
             int total = Integer.parseInt(txtTotal.getText().trim());
             int favorables = Integer.parseInt(txtFavorables.getText().trim());
             
+            if (total <= 0) {
+                mostrarError("El total de casos debe ser mayor a 0");
+                return;
+            }
+            
             if (favorables > total) {
-                JOptionPane.showMessageDialog(this, 
-                    "Los casos favorables no pueden ser mayores que el total",
-                    "Error", JOptionPane.ERROR_MESSAGE);
+                mostrarError("Los casos favorables no pueden ser mayores que el total");
+                return;
+            }
+            
+            if (favorables < 0) {
+                mostrarError("Los casos favorables no pueden ser negativos");
                 return;
             }
             
             double entropia = MathUtils.calcularEntropiaBinaria(total, favorables);
-            lblResultado.setText(String.format("Entropía = %.4f", entropia));
+            lblResultado.setText(String.format("Resultado: E = %.4f", entropia));
             
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, 
-                "Por favor ingrese números válidos",
-                "Error", JOptionPane.ERROR_MESSAGE);
+            mostrarError("Por favor ingrese números enteros válidos");
         }
+    }
+    
+    private void mostrarError(String mensaje) {
+        JOptionPane.showMessageDialog(this, mensaje, 
+            "Error", JOptionPane.ERROR_MESSAGE);
     }
 
     /**
