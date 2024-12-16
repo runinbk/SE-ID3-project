@@ -121,25 +121,18 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     }
     
     private void agregarComponentesTabla() {
-        // Panel para controles
         JPanel panelControles = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        btnCargar = new JButton("Cargar CSV");
-        comboColumnaObjetivo = new JComboBox<>();
 
-        panelControles.add(btnCargar);
+        comboColumnaObjetivo = new JComboBox<>();
+        comboColumnaObjetivo.addActionListener(e -> actualizarColumnaObjetivo());
+
         panelControles.add(new JLabel("Columna Objetivo:"));
         panelControles.add(comboColumnaObjetivo);
 
-        // Panel tabla
         panelTabla = new PanelTabla();
 
-        // Agregar al panel principal
         panelPrincipal.add(panelControles, BorderLayout.NORTH);
         panelPrincipal.add(panelTabla, BorderLayout.CENTER);
-
-        // Configurar eventos
-        btnCargar.addActionListener(e -> cargarArchivo());
-        comboColumnaObjetivo.addActionListener(e -> actualizarColumnaObjetivo());
     }
 
     private void cargarArchivo() {
@@ -171,20 +164,12 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         comboColumnaObjetivo.removeAllItems();
         datos.getColumnas().forEach(comboColumnaObjetivo::addItem);
     }
-    
+
     private void actualizarColumnaObjetivo() {
         if (comboColumnaObjetivo.getSelectedIndex() != -1) {
-            try {
-                int indiceSeleccionado = comboColumnaObjetivo.getSelectedIndex();
-                TablaID3 datos = panelTabla.getDatosID3(); // Necesitamos agregar este getter en PanelTabla
-                if (datos != null) {
-                    datos.setColumnaObjetivo(indiceSeleccionado);
-                }
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this,
-                    "Error al actualizar columna objetivo: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
-            }
+            int indiceSeleccionado = comboColumnaObjetivo.getSelectedIndex();
+            panelTabla.getDatosID3().setColumnaObjetivo(indiceSeleccionado);
+            panelTabla.resaltarColumnaObjetivo(indiceSeleccionado);
         }
     }
     
