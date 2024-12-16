@@ -37,10 +37,10 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     
     private void configurarVentana() {
         setTitle("Implementación ID3 - Cálculos de Entropía");
-        setSize(500, 300);
+        setSize(800, 600);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        
+
         panelPrincipal = new JPanel(new BorderLayout(10, 10));
         panelPrincipal.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         setContentPane(panelPrincipal);
@@ -120,23 +120,35 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     }
     
     private void agregarComponentesTabla() {
-        // Panel para controles
-        JPanel panelControles = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        // Panel para controles con mejor espaciado
+        JPanel panelControles = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+        panelControles.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+
         btnCargar = new JButton("Cargar CSV");
+        btnCargar.setPreferredSize(new Dimension(100, 30));
+
         comboColumnaObjetivo = new JComboBox<>();
+        comboColumnaObjetivo.setPreferredSize(new Dimension(150, 30));
 
         panelControles.add(btnCargar);
-        panelControles.add(new JLabel("Columna Objetivo:"));
-        comboColumnaObjetivo = new JComboBox<>();
-        comboColumnaObjetivo.addActionListener(e -> actualizarColumnaObjetivo());
-
+        panelControles.add(Box.createHorizontalStrut(10));  // Espacio entre componentes
         panelControles.add(new JLabel("Columna Objetivo:"));
         panelControles.add(comboColumnaObjetivo);
 
+        // Panel tabla con mejor tamaño
         panelTabla = new PanelTabla();
+        panelTabla.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createEmptyBorder(5, 5, 5, 5),
+            BorderFactory.createLineBorder(Color.GRAY)
+        ));
 
+        // Usa el panel principal completo
+        panelPrincipal.removeAll();
         panelPrincipal.add(panelControles, BorderLayout.NORTH);
         panelPrincipal.add(panelTabla, BorderLayout.CENTER);
+
+        btnCargar.addActionListener(e -> cargarArchivo());
+        comboColumnaObjetivo.addActionListener(e -> actualizarColumnaObjetivo());
     }
 
     private void cargarArchivo() {
@@ -168,6 +180,8 @@ public class VentanaPrincipal extends javax.swing.JFrame {
                 TablaID3 datos = panelTabla.getDatosID3(); // Necesitamos agregar este getter en PanelTabla
                 if (datos != null) {
                     datos.setColumnaObjetivo(indiceSeleccionado);
+                    // Opcional: Resaltar la columna objetivo en la tabla
+                    panelTabla.resaltarColumnaObjetivo(indiceSeleccionado);
                 }
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this,
