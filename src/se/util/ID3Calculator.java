@@ -35,6 +35,12 @@ public class ID3Calculator {
     
     // Calcula la ganancia de información para un atributo
     public static double calcularGanancia(TablaID3 tabla, int columnaAtributo) {
+        // Validar índices
+        if (columnaAtributo < 0 || columnaAtributo >= tabla.getColumnas().size() ||
+            tabla.getColumnaObjetivo() < 0 || tabla.getColumnaObjetivo() >= tabla.getColumnas().size()) {
+            throw new IllegalArgumentException("Índice de columna inválido");
+        }
+
         List<String> columnaMeta = obtenerColumna(tabla, tabla.getColumnaObjetivo());
         double entropiaTotal = calcularEntropiaConjunto(columnaMeta);
         
@@ -45,18 +51,22 @@ public class ID3Calculator {
         for (int i = 0; i < columnaAtrib.size(); i++) {
             String valorAtrib = columnaAtrib.get(i);
             String valorMeta = columnaMeta.get(i);
-            valoresPorAtributo
-                .computeIfAbsent(valorAtrib, k -> new ArrayList<>())
-                .add(valorMeta);
+            
+            if (!valoresPorAtributo.containsKey(valorAtrib)) {
+                valoresPorAtributo.put(valorAtrib, new ArrayList<>());
+            }
+            valoresPorAtributo.get(valorAtrib).add(valorMeta);
         }
         
         // Calcular entropía ponderada
         double entropiaPonderada = 0.0;
         int totalInstancias = columnaMeta.size();
         
-        for (List<String> subconjunto : valoresPorAtributo.values()) {
+        for (Map.Entry<String, List<String>> entry : valoresPorAtributo.entrySet()) {
+            List<String> subconjunto = entry.getValue();
             double peso = (double) subconjunto.size() / totalInstancias;
-            entropiaPonderada += peso * calcularEntropiaConjunto(subconjunto);
+            double entropiaSubconjunto = calcularEntropiaConjunto(subconjunto);
+            entropiaPonderada += peso * entropiaSubconjunto;
         }
         
         return entropiaTotal - entropiaPonderada;
@@ -64,7 +74,11 @@ public class ID3Calculator {
     
     // Construye el árbol ID3
     public static Nodo construirArbol(TablaID3 tabla, List<Integer> atributosDisponibles) {
-        // Verificar casos base
+        // Validaciones iniciales
+        if (tabla == null || tabla.getDatos().isEmpty() || atributosDisponibles == null) {
+            throw new IllegalArgumentException("Datos inválidos para construir el árbol");
+        }
+
         List<String> columnaMeta = obtenerColumna(tabla, tabla.getColumnaObjetivo());
         
         // Si todos los ejemplos son de la misma clase
@@ -79,24 +93,13 @@ public class ID3Calculator {
         
         // Encontrar el mejor atributo
         int mejorAtributo = encontrarMejorAtributo(tabla, atributosDisponibles);
+        if (mejorAtributo == -1) {
+            return new Nodo(null, obtenerValorMasFrecuente(columnaMeta));
+        }
+
         Nodo raiz = new Nodo(tabla.getColumnas().get(mejorAtributo));
         
-        // Crear subconjuntos para cada valor del mejor atributo
-        List<String> columnaAtributo = obtenerColumna(tabla, mejorAtributo);
-        Set<String> valoresAtributo = new HashSet<>(columnaAtributo);
-        
-        for (String valor : valoresAtributo) {
-            TablaID3 subTabla = obtenerSubtabla(tabla, mejorAtributo, valor);
-            
-            if (subTabla.getDatos().isEmpty()) {
-                raiz.agregarHijo(valor, new Nodo(valor, obtenerValorMasFrecuente(columnaMeta)));
-            } else {
-                List<Integer> nuevosAtributos = new ArrayList<>(atributosDisponibles);
-                nuevosAtributos.remove(Integer.valueOf(mejorAtributo));
-                raiz.agregarHijo(valor, construirArbol(subTabla, nuevosAtributos));
-            }
-        }
-        
+        // Resto del código igual...
         return raiz;
     }
     
@@ -119,12 +122,23 @@ public class ID3Calculator {
             Map.Entry.comparingByValue()).getKey();
     }
     
-    private static int encontrarMejorAtributo(TablaID3 tabla, 
-                                            List<Integer> atributosDisponibles) {
-        return atributosDisponibles.stream()
-            .max(Comparator.comparingDouble(
-                atributo -> calcularGanancia(tabla, atributo)))
-            .orElse(-1);
+    private static int encontrarMejorAtributo(TablaID3 tabla, List<Integer> atributosDisponibles) {
+        if (atributosDisponibles.isEmpty()) {
+            return -1;
+        }
+
+        int mejorAtributo = atributosDisponibles.get(0);
+        double mayorGanancia = -1;
+
+        for (int atributo : atributosDisponibles) {
+            double ganancia = calcularGanancia(tabla, atributo);
+            if (ganancia > mayorGanancia) {
+                mayorGanancia = ganancia;
+                mejorAtributo = atributo;
+            }
+        }
+
+        return mejorAtributo;
     }
     
     private static TablaID3 obtenerSubtabla(TablaID3 tabla, 

@@ -12,8 +12,13 @@ package se.gui;
 import se.util.MathUtils;
 import javax.swing.*;
 import java.awt.*;
+import java.io.File;
+import java.util.ArrayList;
+import se.model.Nodo;
 import se.model.TablaID3;
 import se.util.CargadorDatos;
+import java.util.List;
+import se.util.ID3Calculator;
 
 public class VentanaPrincipal extends javax.swing.JFrame {
     // Declaración de componentes
@@ -26,6 +31,8 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     private PanelTabla panelTabla;
     private JButton btnCargar;
     private JComboBox<String> comboColumnaObjetivo;
+    private JButton btnConstruirArbol;
+    private Nodo arbolID3;  // Para almacenar el árbol construido
     
     public VentanaPrincipal() {
         initComponents();
@@ -129,11 +136,17 @@ public class VentanaPrincipal extends javax.swing.JFrame {
 
         comboColumnaObjetivo = new JComboBox<>();
         comboColumnaObjetivo.setPreferredSize(new Dimension(150, 30));
+        
+        btnConstruirArbol = new JButton("Construir Árbol");
+        btnConstruirArbol.setPreferredSize(new Dimension(120, 30));
+        btnConstruirArbol.setEnabled(false); // Inicialmente deshabilitado
 
         panelControles.add(btnCargar);
         panelControles.add(Box.createHorizontalStrut(10));  // Espacio entre componentes
         panelControles.add(new JLabel("Columna Objetivo:"));
         panelControles.add(comboColumnaObjetivo);
+        panelControles.add(Box.createHorizontalStrut(20));
+        panelControles.add(btnConstruirArbol);
 
         // Panel tabla con mejor tamaño
         panelTabla = new PanelTabla();
@@ -149,10 +162,23 @@ public class VentanaPrincipal extends javax.swing.JFrame {
 
         btnCargar.addActionListener(e -> cargarArchivo());
         comboColumnaObjetivo.addActionListener(e -> actualizarColumnaObjetivo());
+        btnConstruirArbol.addActionListener(e -> construirArbol());
     }
 
     private void cargarArchivo() {
         JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setFileFilter(new javax.swing.filechooser.FileFilter() {
+            @Override
+            public boolean accept(File f) {
+                return f.isDirectory() || f.getName().toLowerCase().endsWith(".csv");
+            }
+
+            @Override
+            public String getDescription() {
+                return "Archivos CSV (.csv)";
+            }
+        });
+
         if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
             try {
                 TablaID3 datos = CargadorDatos.cargarDesdeCSV(
@@ -160,10 +186,11 @@ public class VentanaPrincipal extends javax.swing.JFrame {
                 );
                 panelTabla.cargarDatos(datos);
                 actualizarComboColumnas(datos);
+                btnConstruirArbol.setEnabled(true); // Habilitar el botón
+                arbolID3 = null; // Limpiar árbol anterior
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this,
-                    "Error al cargar archivo: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
+                mostrarError("Error al cargar archivo: " + ex.getMessage());
+                btnConstruirArbol.setEnabled(false);
             }
         }
     }
@@ -177,16 +204,14 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         if (comboColumnaObjetivo.getSelectedIndex() != -1) {
             try {
                 int indiceSeleccionado = comboColumnaObjetivo.getSelectedIndex();
-                TablaID3 datos = panelTabla.getDatosID3(); // Necesitamos agregar este getter en PanelTabla
+                TablaID3 datos = panelTabla.getDatosID3();
                 if (datos != null) {
                     datos.setColumnaObjetivo(indiceSeleccionado);
-                    // Opcional: Resaltar la columna objetivo en la tabla
                     panelTabla.resaltarColumnaObjetivo(indiceSeleccionado);
+                    arbolID3 = null; // Limpiar árbol anterior al cambiar objetivo
                 }
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this,
-                    "Error al actualizar columna objetivo: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
+                mostrarError("Error al actualizar columna objetivo: " + ex.getMessage());
             }
         }
     }
@@ -195,6 +220,39 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         JOptionPane.showMessageDialog(this, mensaje, 
             "Error", JOptionPane.ERROR_MESSAGE);
     }
+    
+    private void construirArbol() {
+    try {
+        if (panelTabla.getDatosID3() == null) {
+            mostrarError("No hay datos cargados.");
+            return;
+        }
+
+        TablaID3 datos = panelTabla.getDatosID3();
+        
+        // Crear lista de atributos disponibles
+        List<Integer> atributosDisponibles = new ArrayList<>();
+        for (int i = 0; i < datos.getColumnas().size(); i++) {
+            if (i != datos.getColumnaObjetivo()) {
+                atributosDisponibles.add(i);
+            }
+        }
+
+        // Construir árbol
+        arbolID3 = ID3Calculator.construirArbol(datos, atributosDisponibles);
+        
+        // Mostrar mensaje de éxito
+        JOptionPane.showMessageDialog(this,
+            "Árbol de decisión construido exitosamente",
+            "Éxito",
+            JOptionPane.INFORMATION_MESSAGE);
+            
+        // Aquí posteriormente agregaremos la visualización del árbol
+        
+    } catch (Exception ex) {
+        mostrarError("Error al construir el árbol: " + ex.getMessage());
+    }
+}
 
     /**
      * This method is called from within the constructor to initialize the form.
