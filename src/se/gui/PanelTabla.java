@@ -13,6 +13,7 @@ import se.model.TablaID3;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import javax.swing.table.DefaultTableCellRenderer;
 
 public class PanelTabla extends javax.swing.JPanel {
 
@@ -23,6 +24,7 @@ public class PanelTabla extends javax.swing.JPanel {
     private JTable tabla;
     private DefaultTableModel modeloTabla;
     private TablaID3 datosID3;
+    private int columnaObjetivo;
      
     public PanelTabla() {
         setLayout(new BorderLayout());
@@ -67,6 +69,31 @@ public class PanelTabla extends javax.swing.JPanel {
             modeloTabla.addRow(fila.toArray())
         );
     }
+    
+    public void resaltarColumnaObjetivo(int columna) {
+        this.columnaObjetivo = columna;
+
+        DefaultTableCellRenderer renderer = new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value,
+                                                           boolean isSelected, boolean hasFocus,
+                                                           int row, int column) {
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                if (column == columnaObjetivo) {
+                    c.setBackground(new Color(230, 230, 255));
+                } else {
+                    c.setBackground(table.getBackground());
+                }
+                return c;
+            }
+        };
+
+        if (columna >= 0 && columna < tabla.getColumnCount()) {
+            tabla.getColumnModel().getColumn(columna).setCellRenderer(renderer);
+            tabla.repaint();
+        }
+    }
+
     
     public TablaID3 getDatosID3() {
         return this.datosID3;
