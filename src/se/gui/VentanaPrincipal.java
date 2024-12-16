@@ -12,7 +12,6 @@ package se.gui;
 import se.util.MathUtils;
 import javax.swing.*;
 import java.awt.*;
-import java.io.File;
 import se.model.TablaID3;
 import se.util.CargadorDatos;
 
@@ -121,8 +120,13 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     }
     
     private void agregarComponentesTabla() {
+        // Panel para controles
         JPanel panelControles = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        btnCargar = new JButton("Cargar CSV");
+        comboColumnaObjetivo = new JComboBox<>();
 
+        panelControles.add(btnCargar);
+        panelControles.add(new JLabel("Columna Objetivo:"));
         comboColumnaObjetivo = new JComboBox<>();
         comboColumnaObjetivo.addActionListener(e -> actualizarColumnaObjetivo());
 
@@ -139,23 +143,15 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         JFileChooser fileChooser = new JFileChooser();
         if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
             try {
-                // Cargar datos
-                File archivoSeleccionado = fileChooser.getSelectedFile();
-                TablaID3 datos = CargadorDatos.cargarDesdeCSV(archivoSeleccionado);
-
-                // Validar datos
-                CargadorDatos.validarDatos(datos);
-
-                // Mostrar datos en la tabla
+                TablaID3 datos = CargadorDatos.cargarDesdeCSV(
+                    fileChooser.getSelectedFile()
+                );
                 panelTabla.cargarDatos(datos);
                 actualizarComboColumnas(datos);
-
-                JOptionPane.showMessageDialog(this, "Archivo cargado y validado correctamente.",
-                        "Éxito", JOptionPane.INFORMATION_MESSAGE);
-
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Error al cargar archivo: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this,
+                    "Error al cargar archivo: " + ex.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -164,12 +160,20 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         comboColumnaObjetivo.removeAllItems();
         datos.getColumnas().forEach(comboColumnaObjetivo::addItem);
     }
-
+    
     private void actualizarColumnaObjetivo() {
         if (comboColumnaObjetivo.getSelectedIndex() != -1) {
-            int indiceSeleccionado = comboColumnaObjetivo.getSelectedIndex();
-            panelTabla.getDatosID3().setColumnaObjetivo(indiceSeleccionado);
-            panelTabla.resaltarColumnaObjetivo(indiceSeleccionado);
+            try {
+                int indiceSeleccionado = comboColumnaObjetivo.getSelectedIndex();
+                TablaID3 datos = panelTabla.getDatosID3(); // Necesitamos agregar este getter en PanelTabla
+                if (datos != null) {
+                    datos.setColumnaObjetivo(indiceSeleccionado);
+                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this,
+                    "Error al actualizar columna objetivo: " + ex.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
     
