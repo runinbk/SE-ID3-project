@@ -12,12 +12,12 @@ package se.gui;
 import se.model.Nodo;
 import se.model.TablaID3;
 import se.util.CargadorDatos;
+import se.util.ID3Calculator;
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import se.util.ID3Calculator;
 
 
 public class VentanaPrincipal extends javax.swing.JFrame {
@@ -26,9 +26,17 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     private PanelTabla panelTabla;
     private PanelArbol panelArbol;
     private JSplitPane splitPane;
+    
+    // Barra de herramientas
+    private JToolBar toolBar;
     private JButton btnCargar;
     private JButton btnConstruirArbol;
     private JComboBox<String> comboColumnaObjetivo;
+    private JButton btnZoomIn;
+    private JButton btnZoomOut;
+    private JButton btnResetZoom;
+    
+    // Modelo
     private Nodo arbolID3;
 
     public VentanaPrincipal() {
@@ -43,32 +51,50 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         panelTabla = new PanelTabla();
         panelArbol = new PanelArbol();
 
-        // Inicializar controles
+        // Inicializar barra de herramientas
+        toolBar = new JToolBar();
+        toolBar.setFloatable(false);
         btnCargar = new JButton("Cargar CSV");
         btnConstruirArbol = new JButton("Construir Árbol");
         comboColumnaObjetivo = new JComboBox<>();
+        btnZoomIn = new JButton("+");
+        btnZoomOut = new JButton("-");
+        btnResetZoom = new JButton("Reset");
 
-        // Configurar botón construir (inicialmente deshabilitado)
+        // Configurar botones
         btnConstruirArbol.setEnabled(false);
+        btnZoomIn.setEnabled(false);
+        btnZoomOut.setEnabled(false);
+        btnResetZoom.setEnabled(false);
 
-        // Crear panel de controles
-        JPanel panelControles = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
-        panelControles.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-        panelControles.add(btnCargar);
-        panelControles.add(new JLabel("Columna Objetivo:"));
-        panelControles.add(comboColumnaObjetivo);
-        panelControles.add(btnConstruirArbol);
+        // Configurar tooltips
+        btnCargar.setToolTipText("Cargar archivo CSV");
+        btnConstruirArbol.setToolTipText("Construir árbol de decisión");
+        btnZoomIn.setToolTipText("Aumentar zoom");
+        btnZoomOut.setToolTipText("Disminuir zoom");
+        btnResetZoom.setToolTipText("Restablecer vista");
 
-        // Configurar paneles con scroll
-        JScrollPane scrollTabla = new JScrollPane(panelTabla);
-        JScrollPane scrollArbol = new JScrollPane(panelArbol);
+        // Agregar componentes a la barra de herramientas
+        toolBar.add(btnCargar);
+        toolBar.addSeparator();
+        toolBar.add(new JLabel("Columna Objetivo: "));
+        toolBar.add(comboColumnaObjetivo);
+        toolBar.addSeparator();
+        toolBar.add(btnConstruirArbol);
+        toolBar.addSeparator();
+        toolBar.add(btnZoomIn);
+        toolBar.add(btnZoomOut);
+        toolBar.add(btnResetZoom);
 
-        // Configurar split pane
-        splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, scrollTabla, scrollArbol);
-        splitPane.setResizeWeight(0.5);
+        // Configurar splitPane
+        splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, 
+            new JScrollPane(panelTabla), 
+            new JScrollPane(panelArbol));
+        splitPane.setResizeWeight(0.4);
+        splitPane.setDividerLocation(400);
 
         // Agregar componentes al panel principal
-        panelPrincipal.add(panelControles, BorderLayout.NORTH);
+        panelPrincipal.add(toolBar, BorderLayout.NORTH);
         panelPrincipal.add(splitPane, BorderLayout.CENTER);
     }
 
@@ -78,25 +104,60 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         setSize(1200, 700);
         setLocationRelativeTo(null);
         setContentPane(panelPrincipal);
+
+        // Agregar menú
+        JMenuBar menuBar = new JMenuBar();
+        JMenu menuArchivo = new JMenu("Archivo");
+        JMenuItem menuItemCargar = new JMenuItem("Cargar CSV");
+        JMenuItem menuItemSalir = new JMenuItem("Salir");
+        
+        menuArchivo.add(menuItemCargar);
+        menuArchivo.addSeparator();
+        menuArchivo.add(menuItemSalir);
+        menuBar.add(menuArchivo);
+        
+        // Eventos del menú
+        menuItemCargar.addActionListener(e -> cargarArchivo());
+        menuItemSalir.addActionListener(e -> System.exit(0));
+        
+        setJMenuBar(menuBar);
     }
 
     private void configurarEventos() {
         btnCargar.addActionListener(e -> cargarArchivo());
         btnConstruirArbol.addActionListener(e -> construirArbol());
         comboColumnaObjetivo.addActionListener(e -> actualizarColumnaObjetivo());
+        btnZoomIn.addActionListener(e -> panelArbol.zoomIn());
+        btnZoomOut.addActionListener(e -> panelArbol.zoomOut());
+        btnResetZoom.addActionListener(e -> panelArbol.resetView());
     }
 
     private void cargarArchivo() {
         JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setFileFilter(new javax.swing.filechooser.FileFilter() {
+            @Override
+            public boolean accept(File f) {
+                return f.isDirectory() || f.getName().toLowerCase().endsWith(".csv");
+            }
+
+            @Override
+            public String getDescription() {
+                return "Archivos CSV (.csv)";
+            }
+        });
+
         if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
             try {
-                TablaID3 datos = CargadorDatos.cargarDesdeCSV(
-                    fileChooser.getSelectedFile()
-                );
+                TablaID3 datos = CargadorDatos.cargarDesdeCSV(fileChooser.getSelectedFile());
                 panelTabla.cargarDatos(datos);
                 actualizarComboColumnas(datos);
                 btnConstruirArbol.setEnabled(true);
                 arbolID3 = null;
+                
+                // Deshabilitar controles de zoom hasta que haya árbol
+                btnZoomIn.setEnabled(false);
+                btnZoomOut.setEnabled(false);
+                btnResetZoom.setEnabled(false);
             } catch (Exception ex) {
                 mostrarError("Error al cargar archivo: " + ex.getMessage());
                 btnConstruirArbol.setEnabled(false);
@@ -112,11 +173,12 @@ public class VentanaPrincipal extends javax.swing.JFrame {
                 return;
             }
 
-            if (comboColumnaObjetivo.getSelectedIndex() == -1) {
+            if (datos.getColumnaObjetivo() == -1) {
                 mostrarError("Seleccione una columna objetivo.");
                 return;
             }
 
+            // Preparar atributos disponibles
             List<Integer> atributosDisponibles = new ArrayList<>();
             for (int i = 0; i < datos.getColumnas().size(); i++) {
                 if (i != datos.getColumnaObjetivo()) {
@@ -124,8 +186,14 @@ public class VentanaPrincipal extends javax.swing.JFrame {
                 }
             }
 
+            // Construir árbol
             arbolID3 = ID3Calculator.construirArbol(datos, atributosDisponibles);
             panelArbol.setArbol(arbolID3);
+
+            // Habilitar controles de zoom
+            btnZoomIn.setEnabled(true);
+            btnZoomOut.setEnabled(true);
+            btnResetZoom.setEnabled(true);
 
             JOptionPane.showMessageDialog(this,
                 "Árbol de decisión construido exitosamente",
@@ -150,6 +218,13 @@ public class VentanaPrincipal extends javax.swing.JFrame {
                 if (datos != null) {
                     datos.setColumnaObjetivo(comboColumnaObjetivo.getSelectedIndex());
                     panelTabla.resaltarColumnaObjetivo(comboColumnaObjetivo.getSelectedIndex());
+                    arbolID3 = null; // Limpiar árbol al cambiar objetivo
+                    panelArbol.setArbol(null);
+                    
+                    // Deshabilitar controles de zoom
+                    btnZoomIn.setEnabled(false);
+                    btnZoomOut.setEnabled(false);
+                    btnResetZoom.setEnabled(false);
                 }
             } catch (Exception ex) {
                 mostrarError("Error al actualizar columna objetivo: " + ex.getMessage());
@@ -193,34 +268,14 @@ public class VentanaPrincipal extends javax.swing.JFrame {
      * @param args the command line arguments
      */
     public static void main(String args[]) {
-        /* Set the Nimbus look and feel */
-        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
-        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
-         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
-         */
         try {
-            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
-                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
-                    break;
-                }
-            }
-        } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(VentanaPrincipal.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(VentanaPrincipal.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(VentanaPrincipal.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(VentanaPrincipal.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (Exception ex) {
+            System.err.println("Error al establecer el Look & Feel del sistema");
         }
-        //</editor-fold>
 
-        /* Create and display the form */
-        java.awt.EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                new VentanaPrincipal().setVisible(true);
-            }
+        SwingUtilities.invokeLater(() -> {
+            new VentanaPrincipal().setVisible(true);
         });
     }
 
