@@ -11,9 +11,9 @@ package se.gui;
 
 import se.model.TablaID3;
 import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
+import javax.swing.table.*;
 import java.awt.*;
-import javax.swing.table.DefaultTableCellRenderer;
+import java.util.List;
 
 public class PanelTabla extends javax.swing.JPanel {
 
@@ -24,31 +24,27 @@ public class PanelTabla extends javax.swing.JPanel {
     private JTable tabla;
     private DefaultTableModel modeloTabla;
     private TablaID3 datosID3;
-    private int columnaObjetivo;
-     
+    
     public PanelTabla() {
         setLayout(new BorderLayout());
-        initComponents();
         inicializarComponentes();
     }
     
     private void inicializarComponentes() {
-        modeloTabla = new DefaultTableModel() {
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return false;
-            }
-        };
-        
+        modeloTabla = new DefaultTableModel();
         tabla = new JTable(modeloTabla);
-        tabla.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-        
+        tabla.setFillsViewportHeight(true);
+        tabla.setRowHeight(25);  // Filas más altas
+        tabla.setIntercellSpacing(new Dimension(10, 5));  // Más espacio entre celdas
+        tabla.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
+        tabla.getTableHeader().setReorderingAllowed(false);
+        tabla.getTableHeader().setFont(tabla.getTableHeader().getFont().deriveFont(Font.BOLD));
+
         JScrollPane scrollPane = new JScrollPane(tabla);
-        scrollPane.setVerticalScrollBarPolicy(
-            JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
-        scrollPane.setHorizontalScrollBarPolicy(
-            JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
-            
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+
+        setLayout(new BorderLayout());
         add(scrollPane, BorderLayout.CENTER);
     }
     
@@ -60,43 +56,54 @@ public class PanelTabla extends javax.swing.JPanel {
     private void actualizarTabla() {
         modeloTabla.setRowCount(0);
         modeloTabla.setColumnCount(0);
-        
+
         // Agregar columnas
-        datosID3.getColumnas().forEach(modeloTabla::addColumn);
-        
+        for (String columna : datosID3.getColumnas()) {
+            modeloTabla.addColumn(columna);
+        }
+
         // Agregar filas
-        datosID3.getDatos().forEach(fila -> 
-            modeloTabla.addRow(fila.toArray())
-        );
+        for (List<String> fila : datosID3.getDatos()) {
+            Object[] arrayFila = fila.toArray();
+            modeloTabla.addRow(arrayFila);
+        }
+    }
+    
+    public TablaID3 getDatosID3() {
+        return datosID3;
     }
     
     public void resaltarColumnaObjetivo(int columna) {
-        this.columnaObjetivo = columna;
-
         DefaultTableCellRenderer renderer = new DefaultTableCellRenderer() {
             @Override
-            public Component getTableCellRendererComponent(JTable table, Object value,
-                                                           boolean isSelected, boolean hasFocus,
-                                                           int row, int column) {
-                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-                if (column == columnaObjetivo) {
-                    c.setBackground(new Color(230, 230, 255));
+            public Component getTableCellRendererComponent(
+                JTable table, Object value, boolean isSelected, 
+                boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(
+                    table, value, isSelected, hasFocus, row, column);
+                if (column == columna) {
+                    setBackground(new Color(217, 237, 247));  // Azul más claro
+                    setForeground(Color.BLACK);
+                    setFont(getFont().deriveFont(Font.BOLD));
                 } else {
-                    c.setBackground(table.getBackground());
+                    setBackground(table.getBackground());
+                    setForeground(table.getForeground());
+                    setFont(table.getFont());
                 }
-                return c;
+                return this;
             }
         };
 
-        if (columna >= 0 && columna < tabla.getColumnCount()) {
-            tabla.getColumnModel().getColumn(columna).setCellRenderer(renderer);
-            tabla.repaint();
+        // Aplicar renderer a todas las columnas primero
+        for (int i = 0; i < tabla.getColumnCount(); i++) {
+            tabla.getColumnModel().getColumn(i).setCellRenderer(
+                new DefaultTableCellRenderer()
+            );
         }
-    }
 
-    
-    public TablaID3 getDatosID3() {
-        return this.datosID3;
+        // Aplicar renderer especial a la columna objetivo
+        tabla.getColumnModel().getColumn(columna).setCellRenderer(renderer);
+        tabla.repaint();
     }
 
 
