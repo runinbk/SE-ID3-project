@@ -12,6 +12,8 @@ package se.gui;
 import se.util.MathUtils;
 import javax.swing.*;
 import java.awt.*;
+import se.model.TablaID3;
+import se.util.CargadorDatos;
 
 public class VentanaPrincipal extends javax.swing.JFrame {
     // Declaración de componentes
@@ -21,12 +23,16 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     private JButton btnCalcular;
     private JPanel panelPrincipal;
     private JPanel panelEntropiaBasica;
+    private PanelTabla panelTabla;
+    private JButton btnCargar;
+    private JComboBox<String> comboColumnaObjetivo;
     
     public VentanaPrincipal() {
         initComponents();
         configurarVentana();
         configurarPanelEntropiaBasica();
         configurarEventos();
+        agregarComponentesTabla();
     }
     
     private void configurarVentana() {
@@ -110,6 +116,66 @@ public class VentanaPrincipal extends javax.swing.JFrame {
             
         } catch (NumberFormatException ex) {
             mostrarError("Por favor ingrese números enteros válidos");
+        }
+    }
+    
+    private void agregarComponentesTabla() {
+        // Panel para controles
+        JPanel panelControles = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        btnCargar = new JButton("Cargar CSV");
+        comboColumnaObjetivo = new JComboBox<>();
+
+        panelControles.add(btnCargar);
+        panelControles.add(new JLabel("Columna Objetivo:"));
+        panelControles.add(comboColumnaObjetivo);
+
+        // Panel tabla
+        panelTabla = new PanelTabla();
+
+        // Agregar al panel principal
+        panelPrincipal.add(panelControles, BorderLayout.NORTH);
+        panelPrincipal.add(panelTabla, BorderLayout.CENTER);
+
+        // Configurar eventos
+        btnCargar.addActionListener(e -> cargarArchivo());
+        comboColumnaObjetivo.addActionListener(e -> actualizarColumnaObjetivo());
+    }
+
+    private void cargarArchivo() {
+        JFileChooser fileChooser = new JFileChooser();
+        if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+            try {
+                TablaID3 datos = CargadorDatos.cargarDesdeCSV(
+                    fileChooser.getSelectedFile()
+                );
+                panelTabla.cargarDatos(datos);
+                actualizarComboColumnas(datos);
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this,
+                    "Error al cargar archivo: " + ex.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    private void actualizarComboColumnas(TablaID3 datos) {
+        comboColumnaObjetivo.removeAllItems();
+        datos.getColumnas().forEach(comboColumnaObjetivo::addItem);
+    }
+    
+    private void actualizarColumnaObjetivo() {
+        if (comboColumnaObjetivo.getSelectedIndex() != -1) {
+            try {
+                int indiceSeleccionado = comboColumnaObjetivo.getSelectedIndex();
+                TablaID3 datos = panelTabla.getDatosID3(); // Necesitamos agregar este getter en PanelTabla
+                if (datos != null) {
+                    datos.setColumnaObjetivo(indiceSeleccionado);
+                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this,
+                    "Error al actualizar columna objetivo: " + ex.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
     
