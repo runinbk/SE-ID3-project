@@ -9,176 +9,85 @@ package se.gui;
  * @author braya
  */
 
-import se.util.MathUtils;
+import se.model.Nodo;
+import se.model.TablaID3;
+import se.util.CargadorDatos;
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
 import java.util.ArrayList;
-import se.model.Nodo;
-import se.model.TablaID3;
-import se.util.CargadorDatos;
 import java.util.List;
 import se.util.ID3Calculator;
 
+
 public class VentanaPrincipal extends javax.swing.JFrame {
     // Declaración de componentes
-    private JTextField txtTotal;
-    private JTextField txtFavorables;
-    private JLabel lblResultado;
-    private JButton btnCalcular;
     private JPanel panelPrincipal;
-    private JPanel panelEntropiaBasica;
     private PanelTabla panelTabla;
+    private PanelArbol panelArbol;
+    private JSplitPane splitPane;
     private JButton btnCargar;
-    private JComboBox<String> comboColumnaObjetivo;
     private JButton btnConstruirArbol;
-    private Nodo arbolID3;  // Para almacenar el árbol construido
-    
-    public VentanaPrincipal() {
-        initComponents();
-        configurarVentana();
-        configurarPanelEntropiaBasica();
-        configurarEventos();
-        agregarComponentesTabla();
-    }
-    
-    private void configurarVentana() {
-        setTitle("Implementación ID3 - Cálculos de Entropía");
-        setSize(800, 600);
-        setLocationRelativeTo(null);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    private JComboBox<String> comboColumnaObjetivo;
+    private Nodo arbolID3;
 
+    public VentanaPrincipal() {
+        inicializarComponentes();
+        configurarVentana();
+        configurarEventos();
+    }
+
+    private void inicializarComponentes() {
+        // Inicializar paneles principales
         panelPrincipal = new JPanel(new BorderLayout(10, 10));
-        panelPrincipal.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        setContentPane(panelPrincipal);
-    }
-    
-    private void configurarPanelEntropiaBasica() {
-        panelEntropiaBasica = new JPanel(new GridBagLayout());
-        panelEntropiaBasica.setBorder(
-            BorderFactory.createTitledBorder("Cálculo de Entropía Binaria")
-        );
-        
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 5, 5, 5);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        
-        // Etiqueta y campo para total de casos
-        gbc.gridx = 0; gbc.gridy = 0;
-        panelEntropiaBasica.add(new JLabel("Total de casos (n):"), gbc);
-        
-        gbc.gridx = 1;
-        txtTotal = new JTextField(10);
-        panelEntropiaBasica.add(txtTotal, gbc);
-        
-        // Etiqueta y campo para casos favorables
-        gbc.gridx = 0; gbc.gridy = 1;
-        panelEntropiaBasica.add(new JLabel("Casos favorables:"), gbc);
-        
-        gbc.gridx = 1;
-        txtFavorables = new JTextField(10);
-        panelEntropiaBasica.add(txtFavorables, gbc);
-        
-        // Botón calcular
-        gbc.gridx = 0; gbc.gridy = 2;
-        gbc.gridwidth = 2;
-        btnCalcular = new JButton("Calcular Entropía");
-        panelEntropiaBasica.add(btnCalcular, gbc);
-        
-        // Etiqueta resultado
-        gbc.gridy = 3;
-        lblResultado = new JLabel("Resultado: ");
-        lblResultado.setFont(new Font("Dialog", Font.BOLD, 14));
-        panelEntropiaBasica.add(lblResultado, gbc);
-        
-        panelPrincipal.add(panelEntropiaBasica, BorderLayout.CENTER);
-    }
-    
-    private void configurarEventos() {
-        btnCalcular.addActionListener(e -> calcularEntropia());
-    }
-    
-    private void calcularEntropia() {
-        try {
-            int total = Integer.parseInt(txtTotal.getText().trim());
-            int favorables = Integer.parseInt(txtFavorables.getText().trim());
-            
-            if (total <= 0) {
-                mostrarError("El total de casos debe ser mayor a 0");
-                return;
-            }
-            
-            if (favorables > total) {
-                mostrarError("Los casos favorables no pueden ser mayores que el total");
-                return;
-            }
-            
-            if (favorables < 0) {
-                mostrarError("Los casos favorables no pueden ser negativos");
-                return;
-            }
-            
-            double entropia = MathUtils.calcularEntropiaBinaria(total, favorables);
-            lblResultado.setText(String.format("Resultado: E = %.4f", entropia));
-            
-        } catch (NumberFormatException ex) {
-            mostrarError("Por favor ingrese números enteros válidos");
-        }
-    }
-    
-    private void agregarComponentesTabla() {
-        // Panel para controles con mejor espaciado
+        panelTabla = new PanelTabla();
+        panelArbol = new PanelArbol();
+
+        // Inicializar controles
+        btnCargar = new JButton("Cargar CSV");
+        btnConstruirArbol = new JButton("Construir Árbol");
+        comboColumnaObjetivo = new JComboBox<>();
+
+        // Configurar botón construir (inicialmente deshabilitado)
+        btnConstruirArbol.setEnabled(false);
+
+        // Crear panel de controles
         JPanel panelControles = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
         panelControles.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-
-        btnCargar = new JButton("Cargar CSV");
-        btnCargar.setPreferredSize(new Dimension(100, 30));
-
-        comboColumnaObjetivo = new JComboBox<>();
-        comboColumnaObjetivo.setPreferredSize(new Dimension(150, 30));
-        
-        btnConstruirArbol = new JButton("Construir Árbol");
-        btnConstruirArbol.setPreferredSize(new Dimension(120, 30));
-        btnConstruirArbol.setEnabled(false); // Inicialmente deshabilitado
-
         panelControles.add(btnCargar);
-        panelControles.add(Box.createHorizontalStrut(10));  // Espacio entre componentes
         panelControles.add(new JLabel("Columna Objetivo:"));
         panelControles.add(comboColumnaObjetivo);
-        panelControles.add(Box.createHorizontalStrut(20));
         panelControles.add(btnConstruirArbol);
 
-        // Panel tabla con mejor tamaño
-        panelTabla = new PanelTabla();
-        panelTabla.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createEmptyBorder(5, 5, 5, 5),
-            BorderFactory.createLineBorder(Color.GRAY)
-        ));
+        // Configurar paneles con scroll
+        JScrollPane scrollTabla = new JScrollPane(panelTabla);
+        JScrollPane scrollArbol = new JScrollPane(panelArbol);
 
-        // Usa el panel principal completo
-        panelPrincipal.removeAll();
+        // Configurar split pane
+        splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, scrollTabla, scrollArbol);
+        splitPane.setResizeWeight(0.5);
+
+        // Agregar componentes al panel principal
         panelPrincipal.add(panelControles, BorderLayout.NORTH);
-        panelPrincipal.add(panelTabla, BorderLayout.CENTER);
+        panelPrincipal.add(splitPane, BorderLayout.CENTER);
+    }
 
+    private void configurarVentana() {
+        setTitle("Implementación ID3 - Cálculos de Entropía");
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setSize(1200, 700);
+        setLocationRelativeTo(null);
+        setContentPane(panelPrincipal);
+    }
+
+    private void configurarEventos() {
         btnCargar.addActionListener(e -> cargarArchivo());
-        comboColumnaObjetivo.addActionListener(e -> actualizarColumnaObjetivo());
         btnConstruirArbol.addActionListener(e -> construirArbol());
+        comboColumnaObjetivo.addActionListener(e -> actualizarColumnaObjetivo());
     }
 
     private void cargarArchivo() {
         JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setFileFilter(new javax.swing.filechooser.FileFilter() {
-            @Override
-            public boolean accept(File f) {
-                return f.isDirectory() || f.getName().toLowerCase().endsWith(".csv");
-            }
-
-            @Override
-            public String getDescription() {
-                return "Archivos CSV (.csv)";
-            }
-        });
-
         if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
             try {
                 TablaID3 datos = CargadorDatos.cargarDesdeCSV(
@@ -186,8 +95,8 @@ public class VentanaPrincipal extends javax.swing.JFrame {
                 );
                 panelTabla.cargarDatos(datos);
                 actualizarComboColumnas(datos);
-                btnConstruirArbol.setEnabled(true); // Habilitar el botón
-                arbolID3 = null; // Limpiar árbol anterior
+                btnConstruirArbol.setEnabled(true);
+                arbolID3 = null;
             } catch (Exception ex) {
                 mostrarError("Error al cargar archivo: " + ex.getMessage());
                 btnConstruirArbol.setEnabled(false);
@@ -195,64 +104,65 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         }
     }
 
+    private void construirArbol() {
+        try {
+            TablaID3 datos = panelTabla.getDatosID3();
+            if (datos == null) {
+                mostrarError("No hay datos cargados.");
+                return;
+            }
+
+            if (comboColumnaObjetivo.getSelectedIndex() == -1) {
+                mostrarError("Seleccione una columna objetivo.");
+                return;
+            }
+
+            List<Integer> atributosDisponibles = new ArrayList<>();
+            for (int i = 0; i < datos.getColumnas().size(); i++) {
+                if (i != datos.getColumnaObjetivo()) {
+                    atributosDisponibles.add(i);
+                }
+            }
+
+            arbolID3 = ID3Calculator.construirArbol(datos, atributosDisponibles);
+            panelArbol.setArbol(arbolID3);
+
+            JOptionPane.showMessageDialog(this,
+                "Árbol de decisión construido exitosamente",
+                "Éxito",
+                JOptionPane.INFORMATION_MESSAGE);
+
+        } catch (Exception ex) {
+            mostrarError("Error al construir el árbol: " + ex.getMessage());
+            ex.printStackTrace();
+        }
+    }
+
     private void actualizarComboColumnas(TablaID3 datos) {
         comboColumnaObjetivo.removeAllItems();
         datos.getColumnas().forEach(comboColumnaObjetivo::addItem);
     }
-    
+
     private void actualizarColumnaObjetivo() {
         if (comboColumnaObjetivo.getSelectedIndex() != -1) {
             try {
-                int indiceSeleccionado = comboColumnaObjetivo.getSelectedIndex();
                 TablaID3 datos = panelTabla.getDatosID3();
                 if (datos != null) {
-                    datos.setColumnaObjetivo(indiceSeleccionado);
-                    panelTabla.resaltarColumnaObjetivo(indiceSeleccionado);
-                    arbolID3 = null; // Limpiar árbol anterior al cambiar objetivo
+                    datos.setColumnaObjetivo(comboColumnaObjetivo.getSelectedIndex());
+                    panelTabla.resaltarColumnaObjetivo(comboColumnaObjetivo.getSelectedIndex());
                 }
             } catch (Exception ex) {
                 mostrarError("Error al actualizar columna objetivo: " + ex.getMessage());
             }
         }
     }
-    
+
     private void mostrarError(String mensaje) {
-        JOptionPane.showMessageDialog(this, mensaje, 
-            "Error", JOptionPane.ERROR_MESSAGE);
-    }
-    
-    private void construirArbol() {
-    try {
-        if (panelTabla.getDatosID3() == null) {
-            mostrarError("No hay datos cargados.");
-            return;
-        }
-
-        TablaID3 datos = panelTabla.getDatosID3();
-        
-        // Crear lista de atributos disponibles
-        List<Integer> atributosDisponibles = new ArrayList<>();
-        for (int i = 0; i < datos.getColumnas().size(); i++) {
-            if (i != datos.getColumnaObjetivo()) {
-                atributosDisponibles.add(i);
-            }
-        }
-
-        // Construir árbol
-        arbolID3 = ID3Calculator.construirArbol(datos, atributosDisponibles);
-        
-        // Mostrar mensaje de éxito
         JOptionPane.showMessageDialog(this,
-            "Árbol de decisión construido exitosamente",
-            "Éxito",
-            JOptionPane.INFORMATION_MESSAGE);
-            
-        // Aquí posteriormente agregaremos la visualización del árbol
-        
-    } catch (Exception ex) {
-        mostrarError("Error al construir el árbol: " + ex.getMessage());
+            mensaje,
+            "Error",
+            JOptionPane.ERROR_MESSAGE);
     }
-}
 
     /**
      * This method is called from within the constructor to initialize the form.
