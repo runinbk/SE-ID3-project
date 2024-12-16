@@ -8,11 +8,17 @@ package se.gui;
  *
  * @author braya
  */
-public class VentanaPrincipal extends javax.swing.JFrame {
 
-    /**
-     * Creates new form VentanaPrincipal
-     */
+import se.util.MathUtils;
+import javax.swing.*;
+import java.awt.*;
+
+public class VentanaPrincipal extends javax.swing.JFrame {
+    private JTextField txtTotal;
+    private JTextField txtFavorables;
+    private JLabel lblResultado;
+    private JButton btnCalcular;
+    
     public VentanaPrincipal() {
         initComponents();
         inicializarComponentes();
@@ -20,11 +26,58 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     
     private void inicializarComponentes() {
         setTitle("Implementación ID3");
-        setSize(800, 600);
+        setSize(500, 300);
         setLocationRelativeTo(null);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         
-        // Agregar componentes básicos
-        // Panel de entrada para cálculo de entropía básica
+        // Panel para cálculo de entropía básica
+        JPanel panelEntropiaBasica = new JPanel();
+        panelEntropiaBasica.setLayout(new GridLayout(4, 2, 10, 10));
+        panelEntropiaBasica.setBorder(BorderFactory.createTitledBorder("Cálculo de Entropía Básica"));
+        
+        // Componentes
+        panelEntropiaBasica.add(new JLabel("Total de casos (n):"));
+        txtTotal = new JTextField();
+        panelEntropiaBasica.add(txtTotal);
+        
+        panelEntropiaBasica.add(new JLabel("Casos favorables:"));
+        txtFavorables = new JTextField();
+        panelEntropiaBasica.add(txtFavorables);
+        
+        btnCalcular = new JButton("Calcular");
+        panelEntropiaBasica.add(btnCalcular);
+        
+        lblResultado = new JLabel("Resultado: ");
+        panelEntropiaBasica.add(lblResultado);
+        
+        // Evento del botón
+        btnCalcular.addActionListener(e -> calcularEntropia());
+        
+        // Agregar panel al frame
+        setLayout(new BorderLayout());
+        add(panelEntropiaBasica, BorderLayout.CENTER);
+    }
+    
+    private void calcularEntropia() {
+        try {
+            int total = Integer.parseInt(txtTotal.getText().trim());
+            int favorables = Integer.parseInt(txtFavorables.getText().trim());
+            
+            if (favorables > total) {
+                JOptionPane.showMessageDialog(this, 
+                    "Los casos favorables no pueden ser mayores que el total",
+                    "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            
+            double entropia = MathUtils.calcularEntropiaBinaria(total, favorables);
+            lblResultado.setText(String.format("Entropía = %.4f", entropia));
+            
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, 
+                "Por favor ingrese números válidos",
+                "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     /**
