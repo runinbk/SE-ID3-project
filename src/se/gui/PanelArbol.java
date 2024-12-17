@@ -136,7 +136,7 @@ public class PanelArbol extends javax.swing.JPanel {
     }
 
     @Override
-    protected void paintComponent(Graphics g) {
+    public void paintComponent(Graphics g) {
         super.paintComponent(g);
         if (raiz != null) {
             Graphics2D g2d = (Graphics2D) g;

@@ -16,8 +16,11 @@ import se.util.ID3Calculator;
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import javax.swing.filechooser.FileNameExtensionFilter;
+import se.util.ExportadorArbol;
 
 
 public class VentanaPrincipal extends javax.swing.JFrame {
@@ -38,6 +41,9 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     
     // Modelo
     private Nodo arbolID3;
+    
+    private PanelCalculos panelCalculos;
+    private JTabbedPane panelDerecho;
 
     public VentanaPrincipal() {
         inicializarComponentes();
@@ -50,6 +56,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         panelPrincipal = new JPanel(new BorderLayout(10, 10));
         panelTabla = new PanelTabla();
         panelArbol = new PanelArbol();
+        panelCalculos = new PanelCalculos();
 
         // Inicializar barra de herramientas
         toolBar = new JToolBar();
@@ -85,6 +92,22 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         toolBar.add(btnZoomIn);
         toolBar.add(btnZoomOut);
         toolBar.add(btnResetZoom);
+        // Agregar botones de exportación al toolbar
+        toolBar.addSeparator();
+        JButton btnExportarImagen = new JButton("Exportar Árbol como Imagen");
+        JButton btnExportarTexto = new JButton("Exportar Árbol como Texto");
+
+        toolBar.add(btnExportarImagen);
+        toolBar.add(btnExportarTexto);
+        
+        // Crear panel con pestañas para el lado derecho
+        panelDerecho = new JTabbedPane();
+        panelDerecho.addTab("Árbol", new JScrollPane(panelArbol));
+        panelDerecho.addTab("Cálculos", new JScrollPane(panelCalculos));
+        
+        // Modificar el splitPane para usar el panel con pestañas
+        splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, 
+        new JScrollPane(panelTabla), panelDerecho);
 
         // Configurar splitPane
         splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, 
@@ -200,6 +223,12 @@ public class VentanaPrincipal extends javax.swing.JFrame {
                 "Éxito",
                 JOptionPane.INFORMATION_MESSAGE);
 
+            arbolID3 = ID3Calculator.construirArbol(datos, atributosDisponibles);
+            panelArbol.setArbol(arbolID3);
+
+            // Actualizar panel de cálculos
+            panelCalculos.actualizarCalculos(datos, atributosDisponibles);
+
         } catch (Exception ex) {
             mostrarError("Error al construir el árbol: " + ex.getMessage());
             ex.printStackTrace();
@@ -238,6 +267,70 @@ public class VentanaPrincipal extends javax.swing.JFrame {
             "Error",
             JOptionPane.ERROR_MESSAGE);
     }
+    
+    // Agregar métodos de exportación
+    private void exportarArbolComoImagen() {
+        if (arbolID3 == null) {
+            mostrarError("No hay árbol para exportar.");
+            return;
+        }
+
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setSelectedFile(new File("arbol_id3.png"));
+        FileNameExtensionFilter filter = new FileNameExtensionFilter(
+            "Imágenes (*.png, *.jpg)", "png", "jpg");
+        fileChooser.setFileFilter(filter);
+
+        if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+            try {
+                File file = fileChooser.getSelectedFile();
+                if (!file.getName().toLowerCase().endsWith(".png")) {
+                    file = new File(file.getParentFile(), file.getName() + ".png");
+                }
+
+                ExportadorArbol.exportarArbolComoImagen(panelArbol, file);
+
+                JOptionPane.showMessageDialog(this,
+                    "Árbol exportado exitosamente como imagen.",
+                    "Éxito",
+                    JOptionPane.INFORMATION_MESSAGE);
+
+            } catch (IOException ex) {
+                mostrarError("Error al exportar el árbol: " + ex.getMessage());
+            }
+        }
+    }
+
+    private void exportarArbolComoTexto() {
+        if (arbolID3 == null) {
+            mostrarError("No hay árbol para exportar.");
+            return;
+        }
+
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setSelectedFile(new File("arbol_id3.txt"));
+
+        if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+            try {
+                File file = fileChooser.getSelectedFile();
+                if (!file.getName().toLowerCase().endsWith(".txt")) {
+                    file = new File(file.getParentFile(), file.getName() + ".txt");
+                }
+
+                ExportadorArbol.exportarArbolComoTexto(arbolID3, file);
+
+                JOptionPane.showMessageDialog(this,
+                    "Árbol exportado exitosamente como texto.",
+                    "Éxito",
+                    JOptionPane.INFORMATION_MESSAGE);
+
+            } catch (IOException ex) {
+                mostrarError("Error al exportar el árbol: " + ex.getMessage());
+            }
+        }
+    }
+
+
 
     /**
      * This method is called from within the constructor to initialize the form.

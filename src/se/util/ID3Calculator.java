@@ -126,7 +126,7 @@ public class ID3Calculator {
     }
     
     // Métodos auxiliares mejorados
-    private static List<String> obtenerColumna(TablaID3 tabla, int columna) {
+    public static List<String> obtenerColumna(TablaID3 tabla, int columna) {
         if (columna < 0 || columna >= tabla.getColumnas().size()) {
             throw new IllegalArgumentException("Índice de columna fuera de rango");
         }
