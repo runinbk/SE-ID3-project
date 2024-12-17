@@ -16,24 +16,29 @@ import se.util.ID3Calculator;
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
-import java.io.IOException;
+import java.awt.image.BufferedImage;
+import javax.imageio.ImageIO;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
-import javax.swing.filechooser.FileNameExtensionFilter;
-import se.util.ExportadorArbol;
+import java.util.Map;
 
 
 public class VentanaPrincipal extends javax.swing.JFrame {
-    // Declaración de componentes
+    // Componentes principales
     private JPanel panelPrincipal;
     private PanelTabla panelTabla;
     private PanelArbol panelArbol;
     private JSplitPane splitPane;
+    private PanelCalculos panelCalculos;
+    private JTabbedPane panelDerecho;
     
     // Barra de herramientas
     private JToolBar toolBar;
     private JButton btnCargar;
     private JButton btnConstruirArbol;
+    private JButton btnExportarImagen;  // Declarado aquí
+    private JButton btnExportarTexto;   // Declarado aquí
     private JComboBox<String> comboColumnaObjetivo;
     private JButton btnZoomIn;
     private JButton btnZoomOut;
@@ -41,9 +46,6 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     
     // Modelo
     private Nodo arbolID3;
-    
-    private PanelCalculos panelCalculos;
-    private JTabbedPane panelDerecho;
 
     public VentanaPrincipal() {
         inicializarComponentes();
@@ -61,8 +63,12 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         // Inicializar barra de herramientas
         toolBar = new JToolBar();
         toolBar.setFloatable(false);
+        
+        // Inicializar todos los botones
         btnCargar = new JButton("Cargar CSV");
         btnConstruirArbol = new JButton("Construir Árbol");
+        btnExportarImagen = new JButton("Exportar Imagen");  // Inicializado aquí
+        btnExportarTexto = new JButton("Exportar Texto");    // Inicializado aquí
         comboColumnaObjetivo = new JComboBox<>();
         btnZoomIn = new JButton("+");
         btnZoomOut = new JButton("-");
@@ -70,16 +76,11 @@ public class VentanaPrincipal extends javax.swing.JFrame {
 
         // Configurar botones
         btnConstruirArbol.setEnabled(false);
+        btnExportarImagen.setEnabled(false);
+        btnExportarTexto.setEnabled(false);
         btnZoomIn.setEnabled(false);
         btnZoomOut.setEnabled(false);
         btnResetZoom.setEnabled(false);
-
-        // Configurar tooltips
-        btnCargar.setToolTipText("Cargar archivo CSV");
-        btnConstruirArbol.setToolTipText("Construir árbol de decisión");
-        btnZoomIn.setToolTipText("Aumentar zoom");
-        btnZoomOut.setToolTipText("Disminuir zoom");
-        btnResetZoom.setToolTipText("Restablecer vista");
 
         // Agregar componentes a la barra de herramientas
         toolBar.add(btnCargar);
@@ -89,26 +90,25 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         toolBar.addSeparator();
         toolBar.add(btnConstruirArbol);
         toolBar.addSeparator();
+        toolBar.add(btnExportarImagen);
+        toolBar.add(btnExportarTexto);
+        toolBar.addSeparator();
         toolBar.add(btnZoomIn);
         toolBar.add(btnZoomOut);
         toolBar.add(btnResetZoom);
-        // Agregar botones de exportación al toolbar
-        toolBar.addSeparator();
-        JButton btnExportarImagen = new JButton("Exportar Árbol como Imagen");
-        JButton btnExportarTexto = new JButton("Exportar Árbol como Texto");
 
-        toolBar.add(btnExportarImagen);
-        toolBar.add(btnExportarTexto);
-        
         // Crear panel con pestañas para el lado derecho
         panelDerecho = new JTabbedPane();
         panelDerecho.addTab("Árbol", new JScrollPane(panelArbol));
         panelDerecho.addTab("Cálculos", new JScrollPane(panelCalculos));
-        
+
         // Modificar el splitPane para usar el panel con pestañas
         splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, 
-        new JScrollPane(panelTabla), panelDerecho);
-
+            new JScrollPane(panelTabla), 
+            panelDerecho);
+        splitPane.setResizeWeight(0.4);
+        splitPane.setDividerLocation(400);
+        
         // Configurar splitPane
         splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, 
             new JScrollPane(panelTabla), 
@@ -149,6 +149,8 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     private void configurarEventos() {
         btnCargar.addActionListener(e -> cargarArchivo());
         btnConstruirArbol.addActionListener(e -> construirArbol());
+        btnExportarImagen.addActionListener(e -> exportarArbolComoImagen());
+        btnExportarTexto.addActionListener(e -> exportarArbolComoTexto());
         comboColumnaObjetivo.addActionListener(e -> actualizarColumnaObjetivo());
         btnZoomIn.addActionListener(e -> panelArbol.zoomIn());
         btnZoomOut.addActionListener(e -> panelArbol.zoomOut());
@@ -201,7 +203,6 @@ public class VentanaPrincipal extends javax.swing.JFrame {
                 return;
             }
 
-            // Preparar atributos disponibles
             List<Integer> atributosDisponibles = new ArrayList<>();
             for (int i = 0; i < datos.getColumnas().size(); i++) {
                 if (i != datos.getColumnaObjetivo()) {
@@ -213,21 +214,20 @@ public class VentanaPrincipal extends javax.swing.JFrame {
             arbolID3 = ID3Calculator.construirArbol(datos, atributosDisponibles);
             panelArbol.setArbol(arbolID3);
 
-            // Habilitar controles de zoom
+            // Actualizar panel de cálculos
+            panelCalculos.actualizarCalculos(datos, atributosDisponibles);
+
+            // Habilitar controles
             btnZoomIn.setEnabled(true);
             btnZoomOut.setEnabled(true);
             btnResetZoom.setEnabled(true);
+            btnExportarImagen.setEnabled(true);
+            btnExportarTexto.setEnabled(true);
 
             JOptionPane.showMessageDialog(this,
                 "Árbol de decisión construido exitosamente",
                 "Éxito",
                 JOptionPane.INFORMATION_MESSAGE);
-
-            arbolID3 = ID3Calculator.construirArbol(datos, atributosDisponibles);
-            panelArbol.setArbol(arbolID3);
-
-            // Actualizar panel de cálculos
-            panelCalculos.actualizarCalculos(datos, atributosDisponibles);
 
         } catch (Exception ex) {
             mostrarError("Error al construir el árbol: " + ex.getMessage());
@@ -276,11 +276,6 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         }
 
         JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setSelectedFile(new File("arbol_id3.png"));
-        FileNameExtensionFilter filter = new FileNameExtensionFilter(
-            "Imágenes (*.png, *.jpg)", "png", "jpg");
-        fileChooser.setFileFilter(filter);
-
         if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
             try {
                 File file = fileChooser.getSelectedFile();
@@ -288,13 +283,16 @@ public class VentanaPrincipal extends javax.swing.JFrame {
                     file = new File(file.getParentFile(), file.getName() + ".png");
                 }
 
-                ExportadorArbol.exportarArbolComoImagen(panelArbol, file);
+                // Crear una imagen del tamaño del panel
+                Dimension size = panelArbol.getPreferredSize();
+                BufferedImage image = new BufferedImage(
+                    size.width, size.height, BufferedImage.TYPE_INT_ARGB);
+                Graphics2D g2d = image.createGraphics();
+                panelArbol.paint(g2d);
+                g2d.dispose();
 
-                JOptionPane.showMessageDialog(this,
-                    "Árbol exportado exitosamente como imagen.",
-                    "Éxito",
-                    JOptionPane.INFORMATION_MESSAGE);
-
+                ImageIO.write(image, "png", file);
+                JOptionPane.showMessageDialog(this, "Árbol exportado exitosamente");
             } catch (IOException ex) {
                 mostrarError("Error al exportar el árbol: " + ex.getMessage());
             }
@@ -308,8 +306,6 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         }
 
         JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setSelectedFile(new File("arbol_id3.txt"));
-
         if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
             try {
                 File file = fileChooser.getSelectedFile();
@@ -317,21 +313,38 @@ public class VentanaPrincipal extends javax.swing.JFrame {
                     file = new File(file.getParentFile(), file.getName() + ".txt");
                 }
 
-                ExportadorArbol.exportarArbolComoTexto(arbolID3, file);
-
-                JOptionPane.showMessageDialog(this,
-                    "Árbol exportado exitosamente como texto.",
-                    "Éxito",
-                    JOptionPane.INFORMATION_MESSAGE);
-
+                try (PrintWriter writer = new PrintWriter(file)) {
+                    exportarNodoComoTexto(arbolID3, "", writer);
+                }
+                JOptionPane.showMessageDialog(this, "Árbol exportado exitosamente");
             } catch (IOException ex) {
                 mostrarError("Error al exportar el árbol: " + ex.getMessage());
             }
         }
     }
 
+    
 
 
+    private void exportarNodoComoTexto(Nodo nodo, String prefijo, PrintWriter writer) {
+        if (nodo == null) return;
+        if (nodo.isEsHoja()) {
+            writer.println(prefijo + "└─ " + nodo.getClasificacion());
+        } else {
+            writer.println(prefijo + "├─ " + nodo.getAtributo());
+            Map<String, Nodo> hijos = nodo.getHijos();
+            int contador = 0;
+            for (Map.Entry<String, Nodo> entry : hijos.entrySet()) {
+                contador++;
+                boolean esUltimo = contador == hijos.size();
+                writer.println(prefijo + "│  " + (esUltimo ? "└" : "├") + "─ " + entry.getKey());
+                exportarNodoComoTexto(entry.getValue(), 
+                    prefijo + "│  " + (esUltimo ? "    " : "│  "), 
+                    writer);
+            }
+        }
+    }
+    
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always

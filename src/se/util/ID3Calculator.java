@@ -172,7 +172,7 @@ public class ID3Calculator {
             .orElse(-1);
     }
     
-    private static TablaID3 obtenerSubtabla(TablaID3 tabla, int columnaAtributo, String valor) {
+    public static TablaID3 obtenerSubtabla(TablaID3 tabla, int columnaAtributo, String valor) {
         TablaID3 subTabla = new TablaID3();
         
         // Copiar estructura de columnas
